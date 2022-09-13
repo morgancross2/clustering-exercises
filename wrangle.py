@@ -53,7 +53,7 @@ def acquire_zillow():
                 AND (propertylandusetypeid = 261 OR propertylandusetypeid = 279);
                 '''
         df = pd.read_sql(q, env.conn('zillow'))
-        df = df.sort_values('transactiondate').drop_duplicates(subset='parcelid', keep='last')
+        df = df.sort_values('transactiondate').drop_duplicates(keep='last')
         
         df = df.drop(columns=['heatingorsystemtypeid', 
                               'buildingclasstypeid',
