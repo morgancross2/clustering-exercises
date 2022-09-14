@@ -5,6 +5,8 @@ import seaborn as sns
 import scipy.stats as stats
 import os
 import env
+from sklearn.model_selection import train_test_split
+
 
 # ACQUIRE
 def acquire_zillow():
@@ -69,6 +71,7 @@ def acquire_zillow():
         
         # Save it locally for future use
         df.to_csv(filename)
+        df = pd.read_csv(filename).iloc[:,1:]
     # return the file
     return df
 
@@ -94,6 +97,7 @@ def prepare_zillow(df):
     
     df = handle_missing_values(df, prop_req_cols=.6, prop_req_rows=.75)
     df = df.dropna()
+    df = df.drop(index=df[df.regionidzip == df.regionidzip.max()].index.tolist())
     
     return df
 
@@ -162,3 +166,43 @@ def handle_missing_values(df, prop_req_cols=0.5, prop_req_rows=0.75):
     df = df.dropna(axis=0, thresh=threshold)
     
     return df
+
+
+def split_data(df):
+    '''
+    Takes in a dataframe and target (as a string). Returns train, validate, and test subset 
+    dataframes with the .2/.8 and .25/.75 splits to create a final .2/.2/.6 split between datasets
+    '''
+    # split the data into train and test. 
+    train, test = train_test_split(df, test_size = .2, random_state=123)
+    
+    # split the train data into train and validate
+    train, validate = train_test_split(train, test_size = .25, random_state=123)
+    
+    return train, validate, test
+
+
+def scale_data(train, val, test, cols_to_scale):
+    '''
+    This function takes in train, validate, and test dataframes as well as a
+    list of features to be scaled via the MinMaxScalar. It then returns the 
+    scaled versions of train, validate, and test in new dataframes. 
+    '''
+    # create copies to not mess with the original dataframes
+    train_scaled = train.copy()
+    val_scaled = val.copy()
+    test_scaled = test.copy()
+    
+    # create the scaler and fit it
+    scaler = MinMaxScaler()
+    scaler.fit(train[cols_to_scale])
+    
+    # use the scaler to scale the data and resave
+    train_scaled[cols_to_scale] = pd.DataFrame(scaler.transform(train[cols_to_scale]),
+                                               columns = train[cols_to_scale].columns.values).set_index([train.index.values])
+    val_scaled[cols_to_scale] = pd.DataFrame(scaler.transform(val[cols_to_scale]),
+                                               columns = val[cols_to_scale].columns.values).set_index([val.index.values])
+    test_scaled[cols_to_scale] = pd.DataFrame(scaler.transform(test[cols_to_scale]),
+                                               columns = test[cols_to_scale].columns.values).set_index([test.index.values])
+    
+    return train_scaled, val_scaled, test_scaled
